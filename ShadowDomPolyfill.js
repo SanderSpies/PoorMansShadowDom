@@ -4,12 +4,14 @@
  * Known issues:
  * - content is wrapped inside a square due to the nature of IFrames, not sure how it will all show up
  * - has only been tested in Chrome / Chrome Canary (10 oct 2012) -> will support more later on
-* -
+ * -
  * - no insertion point support
  * - no applyAuthorStyles support
  * - no resetStyleInheritance support
  * - no activeElement support
  * - no innerHTML support
+ *
+ * If all hell breaks loose -> call someone else!
  *
  * Version 0.1
  *
@@ -56,25 +58,24 @@ var ShadowRootPolyfill = (function () {
 			return containerDocument.getElementsByTagNameNS(ns, localName);
 		};
 
-		this.getSelection = function(){
+		this.getSelection = function () {
 			return containerDocument.getSelection();
 		};
 
-		this.cloneNode = function(){
+		this.cloneNode = function () {
 			throw new Error("The object can not be cloned.");
 		};
 
 		this.styleSheets = containerDocument.styleSheets;
 
-		this.addStyleSheet = function(stylesheet){
+		this.addStyleSheet = function (stylesheet) {
 			stylesheet = stylesheet.cloneNode(true);
-			if(stylesheet instanceof HTMLLinkElement){
-
+			if (stylesheet instanceof HTMLLinkElement) {
 				containerDocument.getElementsByTagName("head")[0].appendChild(stylesheet);
 				return containerDocument.styleSheets[containerDocument.styleSheets.length - 1];
 			}
-			else if (stylesheet instanceof HTMLStyleElement){
-				containerDocument.body.appendChild(stylesheet);
+			else if (stylesheet instanceof HTMLStyleElement) {
+				fragment.appendChild(stylesheet);
 				return stylesheet;
 			}
 			else {
@@ -82,7 +83,7 @@ var ShadowRootPolyfill = (function () {
 			}
 		};
 
-		this.removeStyleSheet = function (stylesheet){
+		this.removeStyleSheet = function (stylesheet) {
 			document.getElementsByTagName("head")[0].removeChild(document.querySelector("link[href='" + stylesheet.href + "']"));
 			return stylesheet;
 		};
