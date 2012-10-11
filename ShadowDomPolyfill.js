@@ -5,7 +5,6 @@
  * - content is wrapped inside a square due to the nature of IFrames, not sure how it will all show up
  * - has only been tested in Chrome / Chrome Canary (10 oct 2012) -> will support more later on
  * -
- * - no insertion point support
  * - no applyAuthorStyles support
  * - no resetStyleInheritance support
  * - no activeElement support
@@ -43,6 +42,7 @@ var ShadowRootPolyfill = (function () {
 		containerDocument.open("text/html", "replace");
 		containerDocument.write("<html><head><style>body{margin:0;padding:0;}</style></head><body></body></html>");
 		containerDocument.close();
+
 		setTimeout(function () {
 			containerDocument.body.appendChild(fragment);
 		}, 0);
@@ -74,7 +74,6 @@ var ShadowRootPolyfill = (function () {
 		this.styleSheets = containerDocument.styleSheets;
 
 		this.addStyleSheet = function (stylesheet) {
-			stylesheet = stylesheet.cloneNode(true);
 			if (stylesheet instanceof HTMLLinkElement) {
 				containerDocument.getElementsByTagName("head")[0].appendChild(stylesheet);
 				return containerDocument.styleSheets[containerDocument.styleSheets.length - 1];
@@ -107,30 +106,52 @@ var ShadowRootPolyfill = (function () {
 			containerDocument.body.innerHTML = "";
 
 			var insertionPoints = changeMe.querySelectorAll("content");
-			var tempOrigContent = this.origContent;
+			var tempOrigContent = this.origContent.cloneNode(true);
 
 			for(var i = 0, l = insertionPoints.length; i < l; i++){
 				var insertionPoint = insertionPoints[i];
 				var selector = insertionPoint.getAttribute("select");
+				if(selector){
 				var matchingEls = tempOrigContent.querySelectorAll(selector);
 				var temp = document.createDocumentFragment();
 				for(var j = 0, l2 = matchingEls.length; j < l2; j++){
 					temp.appendChild(matchingEls[j]);
+					//matchingEls[j].parentNode.removeChild(matchingEls[j]);
+
 				}
 				insertionPoint.parentNode.insertBefore(temp, insertionPoint);
 				insertionPoint.parentNode.removeChild(insertionPoint);
+				}
+			}
+			for(var i = 0, l = insertionPoints.length; i < l; i++){
+				var insertionPoint = insertionPoints[i];				
+				var selector = insertionPoint.getAttribute("select");
+				if(!selector){
+					var temp = document.createDocumentFragment();
+					var c = tempOrigContent.children;
+					
+					while(c.length){
+						temp.appendChild(c[0]);	
+					}
+
+					insertionPoint.parentNode.insertBefore(temp, insertionPoint);
+					insertionPoint.parentNode.removeChild(insertionPoint);
+			
+				}			
 			}
 
 			var changeMeChildren = changeMe.children;
 			fragment = document.createDocumentFragment();
-			containerDocument.body.appendChild(fragment);
-			for (var i = 0, l = changeMeChildren.length; i < l; i++) {
-				fragment.appendChild(changeMeChildren[i]);
+			//for (var i = 0, l = changeMeChildren.length; i < l; i++) {
+				
+			//}
+
+			while(changeMeChildren.length){
+				fragment.appendChild(changeMeChildren[0]);
 			}
 
-			var changeMe2 = document.createElement("div");
-			changeMe2.innerHTML = this.insertedContent;
-
+			containerDocument.body.appendChild(fragment);
+			
 			return changeMe;
 		};
 	};
