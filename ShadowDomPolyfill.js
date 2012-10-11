@@ -20,15 +20,14 @@ var ShadowRootPolyfill = (function () {
 	var container = document.createElement("iframe");
 
 	container.src = "about:blank";
-	container.style = "display:none";
 	container.setAttribute("frameborder", "0");
 
 	var root = function ShadowRoot(el) {
 		if (!el) {
 			throw TypeError("Not enough arguments");
 		}
-		container.width = el.offsetWidth;
-		container.height = el.offsetHeight;
+		container.style.width = "100%";
+		container.style.height = "100%";
 
 		var origContent = this.origContent = document.createElement("div");
 		origContent.innerHTML = el.innerHTML;
@@ -152,6 +151,12 @@ var ShadowRootPolyfill = (function () {
 
 			containerDocument.body.appendChild(fragment);
 			
+			if(containerDocument.body.scrollHeight > el.offsetHeight){
+					el.style.height = containerDocument.body.scrollHeight + "px";
+					container.style.height = containerDocument.body.scrollHeight + "px";
+	
+			}
+
 			return changeMe;
 		};
 	};
