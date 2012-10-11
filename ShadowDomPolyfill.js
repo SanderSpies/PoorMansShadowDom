@@ -9,7 +9,6 @@
  * - no applyAuthorStyles support
  * - no resetStyleInheritance support
  * - no activeElement support
- * - no innerHTML support
  *
  * If all hell breaks loose -> call someone else!
  *
@@ -32,15 +31,21 @@ var ShadowRootPolyfill = (function () {
 		container.width = el.offsetWidth;
 		container.height = el.offsetHeight;
 
+		var origContent = this.origContent = document.createElement("div");
+		origContent.innerHTML = el.innerHTML;
+		this.insertedContent = "";
+
 		el.innerHTML = "";
+
 		el.appendChild(container);
 
 		var containerDocument = container.contentWindow.document;
 		containerDocument.open("text/html", "replace");
 		containerDocument.write("<html><head><style>body{margin:0;padding:0;}</style></head><body></body></html>");
 		containerDocument.close();
-
-		containerDocument.body.appendChild(fragment);
+		setTimeout(function () {
+			containerDocument.body.appendChild(fragment);
+		}, 0);
 
 		this.getElementById = function getElementById(id) {
 			return containerDocument.getElementById(id);
@@ -88,6 +93,46 @@ var ShadowRootPolyfill = (function () {
 			return stylesheet;
 		};
 
+
+		this.innerHTML = function (html) {
+			if (!html) {
+				return this.insertedContent;
+			}
+			else {
+				this.insertedContent = html;
+			}
+
+			var changeMe = document.createElement("div");
+			changeMe.innerHTML = this.insertedContent;
+			containerDocument.body.innerHTML = "";
+
+			var insertionPoints = changeMe.querySelectorAll("content");
+			var tempOrigContent = this.origContent;
+
+			for(var i = 0, l = insertionPoints.length; i < l; i++){
+				var insertionPoint = insertionPoints[i];
+				var selector = insertionPoint.getAttribute("select");
+				var matchingEls = tempOrigContent.querySelectorAll(selector);
+				var temp = document.createDocumentFragment();
+				for(var j = 0, l2 = matchingEls.length; j < l2; j++){
+					temp.appendChild(matchingEls[j]);
+				}
+				insertionPoint.parentNode.insertBefore(temp, insertionPoint);
+				insertionPoint.parentNode.removeChild(insertionPoint);
+			}
+
+			var changeMeChildren = changeMe.children;
+			fragment = document.createDocumentFragment();
+			containerDocument.body.appendChild(fragment);
+			for (var i = 0, l = changeMeChildren.length; i < l; i++) {
+				fragment.appendChild(changeMeChildren[i]);
+			}
+
+			var changeMe2 = document.createElement("div");
+			changeMe2.innerHTML = this.insertedContent;
+
+			return changeMe;
+		};
 	};
 
 	root.prototype = fragment;

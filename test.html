@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+    </head>
+    <html>
+        <div id="test">
+            <span class="from">Sander</span>
+            <span class="message">Hey there!</span>
+        </div>
+
+        <script type="text/javascript" src="ShadowDomPolyfill.js">
+
+        </script>
+        <script type="text/javascript">
+            var test = new ShadowRootPolyfill(document.getElementById("test"));
+            test.innerHTML("<div id='hallo' class='test'><content select='.from'></content> said <content select='.message'></content></div>");
+            var style = document.createElement("style");
+            style.setAttribute("type", "text/css");
+            style.innerHTML = ".from {background-color:purple; }";
+            test.addStyleSheet(style);
+            console.log(test.getElementById("hallo"));
+        </script>
+    </html>
+</html>
