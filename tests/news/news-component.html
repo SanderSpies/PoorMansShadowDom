@@ -13,6 +13,7 @@
                 font-size: 20px;
                 border: 1px dashed Purple;
             }
+
             div.other {
                 padding: 2px 0 0 0;
                 border: 1px solid Cyan;
@@ -33,11 +34,31 @@
         </div>
     </template>
     <script>
-        NewsComponent.prototype.setTitle = function NewsComponent$setTitle(){
-            console.log("set title ahum! - how do I know my component? hubba hubba...");
-            this.innerHTML = "hur!";
+        //debugger;
+        console.log(this);
+
+        NewsComponent.prototype.setId = function NewsComponent$setId(id) {
+            this.id = id;
         };
 
+        NewsComponent.prototype.addHeadLine = function NewsComponent$addHeadLine(txt, isBreaking) {
+            var el = document.createElement("li");
+            if (isBreaking) {
+                el.className = "breaking";
+            }
+            el.innerHTML = txt;
+            this.appendChild(el);
+        };
+
+        this.lifecycle({
+            created:function(root){
+                console.log("created.");
+
+            },
+            inserted:function(){
+                console.log("inserted.");
+            }
+        })
 
     </script>
 </element>

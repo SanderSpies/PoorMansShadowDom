@@ -16,21 +16,33 @@
     <li class="breaking"><a href="//example.com/stories/5">Horrible story</a></li>
 </ul>
 
-
-        <script type="text/javascript" src="../../ShadowDomPolyfill.js">
-        </script>
-	<script type="text/javascript" src="WebComponents-polyfill.js"></script>
-        <script type="text/javascript">
-
-
-/*            var test = new ShadowRootPolyfill(document.getElementById("test"));
-            test.innerHTML("<div id='hallo' class='test'><content select='.from'></content> said: <content select='.message'></content>. Remaining inserts: <content></content>	</div>");
-            var style = document.createElement("style");
-            style.setAttribute("type", "text/css");
-            style.innerHTML = ".from {text-decoration:underline;} .message:before, .message:after{content:'\"' }";
-            test.addStyleSheet(style);
-            console.log(test.getElementById("hallo"));*/
-
-        </script>
     </html>
+
+
+    <script type="text/javascript" src="../../ShadowDomPolyfill.js">
+    </script>
+    <script type="text/javascript" src="WebComponents-polyfill.js"></script>
+    <script type="text/javascript">
+        //test 1
+        var a = new NewsComponent();
+        a.setId("boe");
+        a.addHeadLine("Ice is cold");
+        a.addHeadLine("Fire is hot", true);
+        document.body.appendChild(a);
+
+        //test 2
+        var b = document.createElement("news");
+        var li1 = document.createElement("li");
+        li1.innerHTML = "test2";
+        b.appendChild(li1);
+
+        var li2 = document.createElement("li");
+        li2.className = "breaking";
+        li2.innerHTML = "test3";
+        b.appendChild(li2);
+
+        document.body.appendChild(b);
+
+
+    </script>
 </html>
