@@ -5,7 +5,7 @@
     <link rel="stylesheet" type="text/css" href="../../src/debug.css">
 </head>
 <body>
-<element name="news" extends="ul">
+<element name="news" extends="ul" constructor="NewsComponent">
     <template>
         <style scoped>
             div.breaking {
@@ -32,6 +32,14 @@
             </ul>
         </div>
     </template>
+    <script>
+        NewsComponent.prototype.setTitle = function NewsComponent$setTitle(){
+            console.log("set title ahum! - how do I know my component? hubba hubba...");
+            this.innerHTML = "hur!";
+        };
+
+
+    </script>
 </element>
 </body>
 </html>
