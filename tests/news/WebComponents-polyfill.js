@@ -19,8 +19,8 @@
 				doc.write(xhr.responseText);
 				doc.close();
 				var elements = doc.querySelectorAll("element");
-				for (var i = 0, l = elements.length; i < l; i++) {
-					var element = elements[i];
+				for (var j = 0, len = elements.length; j < len; j++) {
+					var element = elements[j];
 					var name = element.getAttribute("name");
 					webComponents[name] = {};
 					webComponents[name].document = doc;
@@ -45,6 +45,7 @@
 							var component = webComponents[compName];
 							var shadowDom = new ShadowRootPolyfill(new window[component.constructor](child));
 							//shadowDom.innerHTML = 'bla';
+							console.log(2);
 							shadowDom.innerHTML = component.element.getElementsByTagName("template")[0].innerHTML;
 						}
 					}
@@ -94,17 +95,17 @@
 			else {
 				return originalCreateElement.call(document, txt);
 				/*var origStyle = el.style;
-				Object.defineProperty(el, "style", {
-					get: function(){
-						console.log(1);
-						return origStyle;
-					},
-					set: function(name, val){
-						console.log(2);
-						origStyle[name] = val;
-						origStyle[name] = val;
-					}
-				});*/
+				 Object.defineProperty(el, "style", {
+				 get: function(){
+				 console.log(1);
+				 return origStyle;
+				 },
+				 set: function(name, val){
+				 console.log(2);
+				 origStyle[name] = val;
+				 origStyle[name] = val;
+				 }
+				 });*/
 				//return el;
 			}
 		};
@@ -131,10 +132,11 @@
 						proto += webComponents[compName].element.getElementsByTagName("script")[i].innerHTML;
 					}
 				}
-
-				proto = "(function(){ var " + component.constructor + " = function " + component.constructor + "(){};  " + proto + "; if( " + component.constructor + "){ return " + component.constructor + ".prototype; } else { return null; } }).call(component.elementInstance)";
+				(function(instance){
+				proto = "(function(){ var " + component.constructor + " = function " + component.constructor + "(){};  " + proto + "; if( " + component.constructor + "){ return " + component.constructor + ".prototype; } else { return null; } }).call(instance)";
 				eval("window['" + component.constructor + "'] = function " + component.constructor + "(el){if(!el){el = originalCreateElement.call(document, '" + webComponents[compName].extends + "');} " +
 					"el.setAttribute('is', '" + compName + "'); var temp = " + proto + "; if(temp){for(var protoName in temp){el[protoName] = temp[protoName]; }} return el;} ");
+				})(component.elementInstance);
 			}
 		}
 
@@ -144,7 +146,7 @@
 			for (var i = 0, l = usingEls.length; i < l; i++) {
 				var el = usingEls[i];
 				if (webComponents[compName].element.getElementsByTagName("template").length > 0) {
-					var instance = new window[component.constructor](el);
+					var instance = new window[webComponents[compName].constructor](el);
 					var shadowDom = new ShadowRootPolyfill(instance);
 					if (webComponents[compName].elementInstance._lifecycle && webComponents[compName].elementInstance._lifecycle.created) {
 						webComponents[compName].elementInstance._lifecycle.created.call(instance, shadowDom);

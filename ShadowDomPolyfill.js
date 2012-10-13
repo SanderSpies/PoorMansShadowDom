@@ -17,9 +17,10 @@
  */
 var ShadowRootPolyfill = (function () {
 	var root2 = (function () {
-		var fragment = document.createDocumentFragment();
 
 		var root = function ShadowRoot(el) {
+			var el = this.el = el;
+			this.fragment = document.createDocumentFragment();
 
 			var container = document.createElement("iframe");
 			container.src = "about:blank";
@@ -30,13 +31,15 @@ var ShadowRootPolyfill = (function () {
 				// make sure innerHTML is set before we do this
 				// also not totally perfect, but close enough
 				setTimeout(function () {
-					container.contentDocument.documentElement.addEventListener("click", function (e) {
-						var target = e.target || e.srcElement;
-						if(target && target.href && target.href !== "" && typeof(target.onclick) !== "function"){
-							e.preventDefault();
-							document.location.href = target.href;
-						}
-					});
+					if (container.contentDocument) {
+						container.contentDocument.documentElement.addEventListener("click", function (e) {
+							var target = e.target || e.srcElement;
+							if (target && target.href && target.href !== "" && typeof(target.onclick) !== "function") {
+								e.preventDefault();
+								document.location.href = target.href;
+							}
+						});
+					}
 				}, 0);
 			};
 
@@ -62,10 +65,10 @@ var ShadowRootPolyfill = (function () {
 			containerDocument.open("text/html", "replace");
 			containerDocument.write("<html><head><style>body{margin:0;padding:0;}</style></head><body></body></html>");
 			containerDocument.close();
-
-			setTimeout(function () {
+			var fragment = this.fragment;
+			//setTimeout(function () {
 				containerDocument.body.appendChild(fragment);
-			}, 0);
+			//}, 0);
 
 			this.getElementById = function getElementById(id) {
 				return containerDocument.getElementById(id);
@@ -99,7 +102,7 @@ var ShadowRootPolyfill = (function () {
 					return containerDocument.styleSheets[containerDocument.styleSheets.length - 1];
 				}
 				else if (stylesheet instanceof HTMLStyleElement) {
-					fragment.appendChild(stylesheet);
+					this.fragment.appendChild(stylesheet);
 					return stylesheet;
 				}
 				else {
@@ -113,6 +116,7 @@ var ShadowRootPolyfill = (function () {
 			};
 
 			this._innerHTML = function (html) {
+				var el = this.el;
 				if (!html) {
 					return this.insertedContent;
 				}
@@ -168,12 +172,12 @@ var ShadowRootPolyfill = (function () {
 				}
 
 				var changeMeChildren = changeMe.children;
-				fragment = document.createDocumentFragment();
+				this.fragment = document.createDocumentFragment();
 				while (changeMeChildren.length) {
-					fragment.appendChild(changeMeChildren[0]);
+					this.fragment.appendChild(changeMeChildren[0]);
 				}
 
-				containerDocument.body.appendChild(fragment);
+				containerDocument.body.appendChild(this.fragment);
 
 				if (containerDocument.body.scrollHeight > el.offsetHeight) {
 					el.style.height = containerDocument.body.scrollHeight + "px";
@@ -185,7 +189,7 @@ var ShadowRootPolyfill = (function () {
 			};
 		};
 
-		root.prototype = fragment;
+		//root.prototype = fragment.prototype;
 
 		Object.defineProperty(root.prototype, 'innerHTML', {
 			enumerable:false,
@@ -195,6 +199,7 @@ var ShadowRootPolyfill = (function () {
 
 			},
 			set:function (prop) {
+				//console.log("set to:", prop);
 				return this._innerHTML(prop);
 			}
 		});
