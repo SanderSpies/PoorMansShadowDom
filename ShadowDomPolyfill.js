@@ -23,6 +23,25 @@ var ShadowRootPolyfill = (function () {
 
 			var container = document.createElement("iframe");
 			container.src = "about:blank";
+
+			var onLoad = function () {
+				container.removeEventListener("load", onLoad);
+
+				// make sure innerHTML is set before we do this
+				// also not totally perfect, but close enough
+				setTimeout(function () {
+					container.contentDocument.documentElement.addEventListener("click", function (e) {
+						var target = e.target || e.srcElement;
+						if(target && target.href && target.href !== "" && typeof(target.onclick) !== "function"){
+							e.preventDefault();
+							document.location.href = target.href;
+						}
+					});
+				}, 0);
+			};
+
+			container.addEventListener("load", onLoad);
+
 			container.setAttribute("frameborder", "0");
 
 			if (!el) {
