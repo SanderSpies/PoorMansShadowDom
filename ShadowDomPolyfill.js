@@ -16,152 +16,172 @@
  * @type {*}
  */
 var ShadowRootPolyfill = (function () {
-	var fragment = document.createDocumentFragment();
-	var container = document.createElement("iframe");
+	var root2 = (function () {
+		var fragment = document.createDocumentFragment();
 
-	container.src = "about:blank";
-	container.setAttribute("frameborder", "0");
+		var root = function ShadowRoot(el) {
 
-	var root = function ShadowRoot(el) {
-		if (!el) {
-			throw TypeError("Not enough arguments");
-		}
-		container.style.width = "100%";
-		container.style.height = "100%";
+			var container = document.createElement("iframe");
+			container.src = "about:blank";
+			container.setAttribute("frameborder", "0");
 
-		var origContent = this.origContent = document.createElement("div");
-		origContent.innerHTML = el.innerHTML;
-		this.insertedContent = "";
-
-		el.innerHTML = "";
-
-		el.appendChild(container);
-
-		var containerDocument = container.contentWindow.document;
-		containerDocument.open("text/html", "replace");
-		containerDocument.write("<html><head><style>body{margin:0;padding:0;}</style></head><body></body></html>");
-		containerDocument.close();
-
-		setTimeout(function () {
-			containerDocument.body.appendChild(fragment);
-		}, 0);
-
-		this.getElementById = function getElementById(id) {
-			return containerDocument.getElementById(id);
-		};
-
-		this.getElementsByClassName = function getElementsByClassName(className) {
-			return containerDocument.getElementsByClassName(className);
-		};
-
-		this.getElementsByTagName = function (tagName) {
-			return containerDocument.getElementsByTagName(tagName);
-		};
-
-		this.getElementsByTagNameNS = function (ns, localName) {
-			return containerDocument.getElementsByTagNameNS(ns, localName);
-		};
-
-		this.getSelection = function () {
-			return containerDocument.getSelection();
-		};
-
-		this.cloneNode = function () {
-			throw new Error("The object can not be cloned.");
-		};
-
-		this.styleSheets = containerDocument.styleSheets;
-
-		this.addStyleSheet = function (stylesheet) {
-			if (stylesheet instanceof HTMLLinkElement) {
-				containerDocument.getElementsByTagName("head")[0].appendChild(stylesheet);
-				return containerDocument.styleSheets[containerDocument.styleSheets.length - 1];
+			if (!el) {
+				throw TypeError("Not enough arguments");
 			}
-			else if (stylesheet instanceof HTMLStyleElement) {
-				fragment.appendChild(stylesheet);
+			container.style.width = "100%";
+			container.style.height = "100%";
+
+			var origContent = this.origContent = document.createElement("div");
+			origContent.innerHTML = el.innerHTML;
+			this.insertedContent = "";
+
+			el.innerHTML = "";
+
+			el.appendChild(container);
+
+			var containerDocument = container.contentWindow.document;
+			containerDocument.open("text/html", "replace");
+			containerDocument.write("<html><head><style>body{margin:0;padding:0;}</style></head><body></body></html>");
+			containerDocument.close();
+
+			setTimeout(function () {
+				containerDocument.body.appendChild(fragment);
+			}, 0);
+
+			this.getElementById = function getElementById(id) {
+				return containerDocument.getElementById(id);
+			};
+
+			this.getElementsByClassName = function getElementsByClassName(className) {
+				return containerDocument.getElementsByClassName(className);
+			};
+
+			this.getElementsByTagName = function (tagName) {
+				return containerDocument.getElementsByTagName(tagName);
+			};
+
+			this.getElementsByTagNameNS = function (ns, localName) {
+				return containerDocument.getElementsByTagNameNS(ns, localName);
+			};
+
+			this.getSelection = function () {
+				return containerDocument.getSelection();
+			};
+
+			this.cloneNode = function () {
+				throw new Error("The object can not be cloned.");
+			};
+
+			this.styleSheets = containerDocument.styleSheets;
+
+			this.addStyleSheet = function (stylesheet) {
+				if (stylesheet instanceof HTMLLinkElement) {
+					containerDocument.getElementsByTagName("head")[0].appendChild(stylesheet);
+					return containerDocument.styleSheets[containerDocument.styleSheets.length - 1];
+				}
+				else if (stylesheet instanceof HTMLStyleElement) {
+					fragment.appendChild(stylesheet);
+					return stylesheet;
+				}
+				else {
+					throw new Error("The type of the object does not match the expected type.");
+				}
+			};
+
+			this.removeStyleSheet = function (stylesheet) {
+				document.getElementsByTagName("head")[0].removeChild(document.querySelector("link[href='" + stylesheet.href + "']"));
 				return stylesheet;
-			}
-			else {
-				throw new Error("The type of the object does not match the expected type.");
-			}
-		};
+			};
 
-		this.removeStyleSheet = function (stylesheet) {
-			document.getElementsByTagName("head")[0].removeChild(document.querySelector("link[href='" + stylesheet.href + "']"));
-			return stylesheet;
-		};
-
-
-		this.innerHTML = function (html) {
-			if (!html) {
-				return this.insertedContent;
-			}
-			else {
-				this.insertedContent = html;
-			}
-
-			var changeMe = document.createElement("div");
-			changeMe.innerHTML = this.insertedContent;
-			containerDocument.body.innerHTML = "";
-
-			var insertionPoints = changeMe.querySelectorAll("content");
-			var tempOrigContent = this.origContent.cloneNode(true);
-
-			for(var i = 0, l = insertionPoints.length; i < l; i++){
-				var insertionPoint = insertionPoints[i];
-				var selector = insertionPoint.getAttribute("select");
-				if(selector){
-				var matchingEls = tempOrigContent.querySelectorAll(selector);
-				var temp = document.createDocumentFragment();
-				for(var j = 0, l2 = matchingEls.length; j < l2; j++){
-					temp.appendChild(matchingEls[j]);
-					//matchingEls[j].parentNode.removeChild(matchingEls[j]);
-
+			this._innerHTML = function (html) {
+				if (!html) {
+					return this.insertedContent;
 				}
-				insertionPoint.parentNode.insertBefore(temp, insertionPoint);
-				insertionPoint.parentNode.removeChild(insertionPoint);
+				else {
+					this.insertedContent = html;
 				}
-			}
-			for(var i = 0, l = insertionPoints.length; i < l; i++){
-				var insertionPoint = insertionPoints[i];				
-				var selector = insertionPoint.getAttribute("select");
-				if(!selector){
-					var temp = document.createDocumentFragment();
-					var c = tempOrigContent.children;
-					
-					while(c.length){
-						temp.appendChild(c[0]);	
+
+				var changeMe = document.createElement("div");
+				changeMe.innerHTML = this.insertedContent;
+				containerDocument.body.innerHTML = "";
+
+				var insertionPoints = changeMe.querySelectorAll("content");
+				var tempOrigContent = this.origContent.cloneNode(true);
+
+				for (var i = 0, l = insertionPoints.length; i < l; i++) {
+					var insertionPoint = insertionPoints[i];
+					var selector = insertionPoint.getAttribute("select");
+					if (selector) {
+						var matchingEls = tempOrigContent.querySelectorAll(selector);
+						var temp = document.createDocumentFragment();
+						for (var j = 0, l2 = matchingEls.length; j < l2; j++) {
+							temp.appendChild(matchingEls[j]);
+							//matchingEls[j].parentNode.removeChild(matchingEls[j]);
+						}
+						var el = document.createElement("span");
+						el.className = "insertionPointEnd";
+						el.setAttribute("select", selector);
+						temp.appendChild(el);
+
+						insertionPoint.parentNode.insertBefore(temp, insertionPoint);
+						insertionPoint.parentNode.removeChild(insertionPoint);
 					}
+				}
+				for (var i = 0, l = insertionPoints.length; i < l; i++) {
+					var insertionPoint = insertionPoints[i];
+					var selector = insertionPoint.getAttribute("select");
+					if (!selector) {
+						var temp = document.createDocumentFragment();
+						var c = tempOrigContent.children;
 
-					insertionPoint.parentNode.insertBefore(temp, insertionPoint);
-					insertionPoint.parentNode.removeChild(insertionPoint);
-			
-				}			
-			}
+						while (c.length) {
+							temp.appendChild(c[0]);
+						}
 
-			var changeMeChildren = changeMe.children;
-			fragment = document.createDocumentFragment();
-			//for (var i = 0, l = changeMeChildren.length; i < l; i++) {
-				
-			//}
+						var el = document.createElement("span");
+						el.className = "insertionPointEnd";
+						temp.appendChild(el);
 
-			while(changeMeChildren.length){
-				fragment.appendChild(changeMeChildren[0]);
-			}
+						insertionPoint.parentNode.insertBefore(temp, insertionPoint);
+						insertionPoint.parentNode.removeChild(insertionPoint);
 
-			containerDocument.body.appendChild(fragment);
-			
-			if(containerDocument.body.scrollHeight > el.offsetHeight){
+					}
+				}
+
+				var changeMeChildren = changeMe.children;
+				fragment = document.createDocumentFragment();
+				while (changeMeChildren.length) {
+					fragment.appendChild(changeMeChildren[0]);
+				}
+
+				containerDocument.body.appendChild(fragment);
+
+				if (containerDocument.body.scrollHeight > el.offsetHeight) {
 					el.style.height = containerDocument.body.scrollHeight + "px";
 					container.style.height = containerDocument.body.scrollHeight + "px";
-	
-			}
 
-			return changeMe;
+				}
+
+				return changeMe;
+			};
 		};
-	};
 
-	root.prototype = fragment;
+		root.prototype = fragment;
 
-	return root;
+		Object.defineProperty(root.prototype, 'innerHTML', {
+			enumerable:false,
+			configurable:true,
+			get:function () {
+				return this._innerHTML();
+
+			},
+			set:function (prop) {
+				return this._innerHTML(prop);
+			}
+		});
+
+		return root;
+
+	});
+	return new root2;
 })();

@@ -44,35 +44,36 @@
 						if (compName === isAttribute) {
 							var component = webComponents[compName];
 							var shadowDom = new ShadowRootPolyfill(new window[component.constructor](child));
-							shadowDom.innerHTML(component.element.getElementsByTagName("template")[0].innerHTML);
+							//shadowDom.innerHTML = 'bla';
+							shadowDom.innerHTML = component.element.getElementsByTagName("template")[0].innerHTML;
 						}
 					}
 				}
 			}
-			else if (!(child instanceof HTMLIFrameElement) && (this.children[0] instanceof HTMLIFrameElement) ) {
+			else if (!(child instanceof HTMLIFrameElement) && (this.children[0] instanceof HTMLIFrameElement)) {
 				var detached = child.parentNode.removeChild(child);
 				var containerDocument = this.children[0].contentDocument;
 				var insertionPoints = containerDocument.querySelectorAll("span[class='insertionPointEnd']");
 				var nullSelector = null;
 				var temp = document.createElement("div");
 				temp.appendChild(detached);
-				for(var i = 0, l = insertionPoints.length; i < l; i++){
+				for (var i = 0, l = insertionPoints.length; i < l; i++) {
 					var insertionPoint = insertionPoints[i];
 					var selector = insertionPoint.getAttribute("select");
-					if(selector === null){
+					if (selector === null) {
 						nullSelector = insertionPoint;
 					}
 					else {
 						var els = temp.querySelectorAll(selector);
-						for(var j = 0, len = els.length; j < len; j++){
+						for (var j = 0, len = els.length; j < len; j++) {
 							var detached2 = temp.removeChild(els[j]);
 							insertionPoint.parentNode.insertBefore(detached2, insertionPoint);
 						}
 					}
 				}
 
-				if(nullSelector){
-					for(var i = 0, l = temp.children.length; i < l; i++){
+				if (nullSelector) {
+					for (var i = 0, l = temp.children.length; i < l; i++) {
 						nullSelector.parentNode.insertBefore(temp.children[i], nullSelector);
 					}
 				}
@@ -92,18 +93,30 @@
 			}
 			else {
 				return originalCreateElement.call(document, txt);
+				/*var origStyle = el.style;
+				Object.defineProperty(el, "style", {
+					get: function(){
+						console.log(1);
+						return origStyle;
+					},
+					set: function(name, val){
+						console.log(2);
+						origStyle[name] = val;
+						origStyle[name] = val;
+					}
+				});*/
+				//return el;
 			}
 		};
 
-		window["HTMLElementElement"] = function HTMLElementElement(){
+		window["HTMLElementElement"] = function HTMLElementElement() {
 
 		};
 		window["HTMLElementElement"].prototype = HTMLElement.prototype;
 
-		window["HTMLElementElement"].prototype.lifecycle = function(obj){
+		window["HTMLElementElement"].prototype.lifecycle = function (obj) {
 			this._lifecycle = obj;
 		};
-
 		/* end of evil dom overrides*/
 
 		/* start of javascript support */
@@ -133,11 +146,11 @@
 				if (webComponents[compName].element.getElementsByTagName("template").length > 0) {
 					var instance = new window[component.constructor](el);
 					var shadowDom = new ShadowRootPolyfill(instance);
-					if(webComponents[compName].elementInstance._lifecycle && webComponents[compName].elementInstance._lifecycle.created){
+					if (webComponents[compName].elementInstance._lifecycle && webComponents[compName].elementInstance._lifecycle.created) {
 						webComponents[compName].elementInstance._lifecycle.created.call(instance, shadowDom);
 					}
-					shadowDom.innerHTML(webComponents[compName].element.getElementsByTagName("template")[0].innerHTML);
-					if(webComponents[compName].elementInstance._lifecycle && webComponents[compName].elementInstance._lifecycle.inserted){
+					shadowDom.innerHTML = webComponents[compName].element.getElementsByTagName("template")[0].innerHTML;
+					if (webComponents[compName].elementInstance._lifecycle && webComponents[compName].elementInstance._lifecycle.inserted) {
 						webComponents[compName].elementInstance._lifecycle.inserted.call(instance);
 					}
 				}

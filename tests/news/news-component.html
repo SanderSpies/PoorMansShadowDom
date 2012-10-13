@@ -35,7 +35,7 @@
     </template>
     <script>
         //debugger;
-        console.log(this);
+        //console.log(this);
 
         NewsComponent.prototype.setId = function NewsComponent$setId(id) {
             this.id = id;
@@ -52,10 +52,11 @@
 
         this.lifecycle({
             created:function(root){
-                console.log("created.");
+                console.log("created.", this, "b", root);
 
             },
             inserted:function(){
+                console.log(this);
                 console.log("inserted.");
             }
         })
