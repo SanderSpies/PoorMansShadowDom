@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<body>
+<element name="x-simple-list" extends="ul" constructor="SimpleListComponent"
+         apply-author-styles="">
+    <template>
+        <content></content>
+    </template>
+    <script>
+
+        SimpleListComponent.prototype.handleEvent = function(e, o){
+           switch(e){
+               case "add":
+                       this.addItem(o);
+                   break;
+           }
+
+            if(this.model._todoItems.length > 0){
+                this.parentNode.style.display = "block";
+            }
+            else {
+                this.parentNode.style.display = "none";
+            }
+        }
+
+        SimpleListComponent.prototype.setModel = function(model){
+            this.model = model;
+            model.observe(this);
+        };
+
+        SimpleListComponent.prototype.addItem = function(itemX){
+            var listItem = new TodoListItem();
+
+            this.appendChild(listItem);
+            listItem.setLabel(itemX);
+
+            listItem.addEventListener("destroyed", function(){console.log("catched destroy!");});
+
+        };
+
+        SimpleListComponent.prototype.removeItem = function(item){
+
+        };
+
+    </script>
+</element>
+</body>
+</html>

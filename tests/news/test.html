@@ -46,5 +46,17 @@
         document.body.appendChild(b);
 
 
+        var li3 = document.createElement("li");
+        li3.className = "breaking";
+        li3.innerHTML = "should also work";
+        b.appendChild(li3);
+
+        var li4 = document.createElement("li");
+        b.appendChild(li3);
+        li4.innerHTML = "does not work yet :-(";
+
+        var length = b.querySelectorAll("li");
+        console.log(length);
+
     </script>
 </html>

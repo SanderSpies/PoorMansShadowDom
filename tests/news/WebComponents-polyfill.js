@@ -25,8 +25,11 @@
 					webComponents[name] = {};
 					webComponents[name].document = doc;
 					webComponents[name].element = element;
+					webComponents[name].template = element.querySelector("template");
+					webComponents[name].instances = [];
 					webComponents[name].extends = element.getAttribute("extends");
 					webComponents[name].constructor = element.getAttribute("constructor");
+
 				}
 			}
 		}
@@ -36,28 +39,43 @@
 		var originalAppendChild = proto2.appendChild;
 		proto2.appendChild = function HTMLElement$appendChild(child) {
 			originalAppendChild.call(this, child);
-			var isAttribute = child.getAttribute("is")
-
+			var isAttribute = child.getAttribute("is");
+			var parentIsAttribute = this.getAttribute("is");
+			var takeChild = false;
+			var component = null;
 			if (isAttribute) {
-				if (!(this.children[0] instanceof HTMLIFrameElement)) {
-					for (var compName in webComponents) {
-						if (compName === isAttribute) {
-							var component = webComponents[compName];
-							var shadowDom = new ShadowRootPolyfill(new window[component.constructor](child));
-							//shadowDom.innerHTML = 'bla';
-							console.log(2);
-							shadowDom.innerHTML = component.element.getElementsByTagName("template")[0].innerHTML;
+				for (var compName in webComponents) {
+					if (compName === isAttribute) {
+						component = webComponents[compName];
+						var shadowDom = new ShadowRootPolyfill(child);
+						//console.log(this, this.lifecycle, this.instance);
+
+						webComponents[compName].instances.push(shadowDom);
+						shadowDom.innerHTML = component.element.getElementsByTagName("template")[0].innerHTML;
+
+
+
+						if (component.element.getAttribute("apply-author-styles")) {
+							shadowDom.applyAuthorStyles = true;
 						}
+
 					}
 				}
+
+				/*	*/
+				takeChild = true;
 			}
-			else if (!(child instanceof HTMLIFrameElement) && (this.children[0] instanceof HTMLIFrameElement)) {
-				var detached = child.parentNode.removeChild(child);
-				var containerDocument = this.children[0].contentDocument;
+
+			if (!(child instanceof HTMLIFrameElement) && (this.children[0] instanceof HTMLIFrameElement)) {
+				var containerDocument = takeChild ? child.children[0].contentDocument : this.children[0].contentDocument;
+
 				var insertionPoints = containerDocument.querySelectorAll("span[class='insertionPointEnd']");
+				var detached = child.parentNode.removeChild(child);
 				var nullSelector = null;
+
 				var temp = document.createElement("div");
-				temp.appendChild(detached);
+				originalAppendChild.call(temp, detached);
+
 				for (var i = 0, l = insertionPoints.length; i < l; i++) {
 					var insertionPoint = insertionPoints[i];
 					var selector = insertionPoint.getAttribute("select");
@@ -83,6 +101,70 @@
 					this.style.height = containerDocument.body.scrollHeight + "px";
 					this.children[0].style.height = containerDocument.body.scrollHeight + "px";
 				}
+
+				if (takeChild) {
+					if(component.element.getAttribute("apply-author-styles") !== null){
+						shadowDom.applyAuthorStyles = true;
+					}
+					//var html = containerDocument.documentElement.outerHTML;
+
+					originalAppendChild.call(this.children[0].contentDocument.body, detached);
+
+					var headChildNodes = containerDocument.head.childNodes;
+					while(headChildNodes.length){
+						detached.childNodes[0].contentDocument.head.appendChild(headChildNodes[0]);
+					}
+
+					var bodyChildNodes = containerDocument.body.childNodes;
+					while(bodyChildNodes.length){
+						detached.childNodes[0].contentDocument.body.appendChild(bodyChildNodes[0]);
+					}
+
+					if (component.elementInstance._lifecycle.created) {
+						component.elementInstance._lifecycle.created.call(child, shadowDom);
+					}
+					if (component.elementInstance._lifecycle.inserted) {
+						component.elementInstance._lifecycle.inserted.call(child);
+					}
+
+					var self = this;
+					setTimeout(function(){
+						var realHeight = child.childNodes[0].contentDocument.body.scrollHeight;
+						child.style.height = realHeight + "px";
+						child.children[0].style.height = realHeight + "px";
+
+						var realHeight2 = self.childNodes[0].contentDocument.body.scrollHeight;
+						self.style.height = realHeight2 + "px";
+						self.children[0].style.height = realHeight2 + "px";
+					},0);
+				}
+			}
+
+			for (var compName in webComponents) {
+				for (var i = 0, l = webComponents[compName].instances.length; i < l; i++) {
+					webComponents[compName].instances[i].recalcHeight();
+				}
+			}
+
+
+		};
+
+		var originalQuerySelector = proto2.querySelector;
+		var originalQuerySelectorAll = proto2.querySelectorAll;
+		proto2.querySelector = function HTMLElement$querySelector(query) {
+			if (this.getAttribute("is") !== null && this.children[0] instanceof HTMLIFrameElement) {
+				return this.children[0].contentDocument.body.querySelector(query);
+			}
+			else {
+				return originalQuerySelector.call(this, query);
+			}
+		};
+		proto2.querySelectorAll = function HTMLElement$querySelectorAll(query) {
+			if (this.getAttribute("is") !== null && this.children[0] instanceof HTMLIFrameElement) {
+				return this.children[0].contentDocument.body.querySelectorAll(query);
+			}
+			else {
+				return originalQuerySelectorAll.call(this, query);
 			}
 		};
 
@@ -94,19 +176,6 @@
 			}
 			else {
 				return originalCreateElement.call(document, txt);
-				/*var origStyle = el.style;
-				 Object.defineProperty(el, "style", {
-				 get: function(){
-				 console.log(1);
-				 return origStyle;
-				 },
-				 set: function(name, val){
-				 console.log(2);
-				 origStyle[name] = val;
-				 origStyle[name] = val;
-				 }
-				 });*/
-				//return el;
 			}
 		};
 
@@ -132,32 +201,46 @@
 						proto += webComponents[compName].element.getElementsByTagName("script")[i].innerHTML;
 					}
 				}
-				(function(instance){
-				proto = "(function(){ var " + component.constructor + " = function " + component.constructor + "(){};  " + proto + "; if( " + component.constructor + "){ return " + component.constructor + ".prototype; } else { return null; } }).call(instance)";
-				eval("window['" + component.constructor + "'] = function " + component.constructor + "(el){if(!el){el = originalCreateElement.call(document, '" + webComponents[compName].extends + "');} " +
-					"el.setAttribute('is', '" + compName + "'); var temp = " + proto + "; if(temp){for(var protoName in temp){el[protoName] = temp[protoName]; }} return el;} ");
-				})(component.elementInstance);
+				var me = this;
+				(function (instance, template) {
+
+					proto = "(function(instance){ var " + component.constructor + " = function " + component.constructor + "(){};  " + proto + "; if( " + component.constructor + "){ return " + component.constructor + ".prototype; } else { return null; } }).call(instance)";
+					eval("window['" + component.constructor + "'] = function " + component.constructor + "(el){ if(!el){el = originalCreateElement.call(document, '" + webComponents[compName].extends + "');} " +
+						"el.setAttribute('is', '" + compName + "'); var temp = " + proto + "; this.instance = instance; if(temp){for(var protoName in temp){el[protoName] = temp[protoName]; }} return el;}; ");
+				})(component.elementInstance, component.template);
 			}
 		}
 
 		/* end of javascript support */
+		/* parse current markup */
 		for (var compName in webComponents) {
 			var usingEls = document.querySelectorAll("[is='" + compName + "']");
 			for (var i = 0, l = usingEls.length; i < l; i++) {
 				var el = usingEls[i];
 				if (webComponents[compName].element.getElementsByTagName("template").length > 0) {
 					var instance = new window[webComponents[compName].constructor](el);
-					var shadowDom = new ShadowRootPolyfill(instance);
+
+					var shadowDom = webComponents[compName].shadowDom = new ShadowRootPolyfill(instance);
+					webComponents[compName].instances.push(shadowDom);
+
 					if (webComponents[compName].elementInstance._lifecycle && webComponents[compName].elementInstance._lifecycle.created) {
 						webComponents[compName].elementInstance._lifecycle.created.call(instance, shadowDom);
 					}
+
 					shadowDom.innerHTML = webComponents[compName].element.getElementsByTagName("template")[0].innerHTML;
+
+
 					if (webComponents[compName].elementInstance._lifecycle && webComponents[compName].elementInstance._lifecycle.inserted) {
 						webComponents[compName].elementInstance._lifecycle.inserted.call(instance);
+					}
+
+					if (webComponents[compName].element.getAttribute("apply-author-styles") !== null) {
+						shadowDom.applyAuthorStyles = true;
 					}
 				}
 			}
 		}
+		/* end of current markup parsing */
 		//
 		//TODO: add web components one by one
 		// outer el is determined by extends=""

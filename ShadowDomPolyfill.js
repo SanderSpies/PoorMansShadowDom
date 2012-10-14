@@ -5,7 +5,6 @@
  * - content is wrapped inside a square due to the nature of IFrames, not sure how it will all show up
  * - has only been tested in Chrome / Chrome Canary (10 oct 2012) -> will support more later on
  * -
- * - no applyAuthorStyles support
  * - no resetStyleInheritance support
  * - no activeElement support
  *
@@ -17,10 +16,12 @@
  */
 var ShadowRootPolyfill = (function () {
 	var root2 = (function () {
-
+		var fragment = document.createDocumentFragment();
 		var root = function ShadowRoot(el) {
+
 			var el = this.el = el;
-			this.fragment = document.createDocumentFragment();
+			this.initialHeight = el.offsetHeight;
+			this.fragment = fragment || document.createDocumentFragment();
 
 			var container = document.createElement("iframe");
 			container.src = "about:blank";
@@ -51,24 +52,46 @@ var ShadowRootPolyfill = (function () {
 				throw TypeError("Not enough arguments");
 			}
 			container.style.width = "100%";
-			container.style.height = "100%";
-
+			container.style.height = "0px";
 			var origContent = this.origContent = document.createElement("div");
 			origContent.innerHTML = el.innerHTML;
+			origContent = origContent.cloneNode(true);
 			this.insertedContent = "";
 
 			el.innerHTML = "";
 
 			el.appendChild(container);
 
+			if(!el.parentNode){
+				//el.style.display = "none";
+				document.body.insertBefore(el, document.body.children[0]);
+			}
+
 			var containerDocument = container.contentWindow.document;
 			containerDocument.open("text/html", "replace");
-			containerDocument.write("<html><head><style>body{margin:0;padding:0;}</style></head><body></body></html>");
+			containerDocument.write("<html><head><style>html{height:0px;width:100%;}body{margin:0;padding:0;width: 100%;overflow:hidden;}</style></head><body></body></html>");
 			containerDocument.close();
+
 			var fragment = this.fragment;
-			//setTimeout(function () {
-				containerDocument.body.appendChild(fragment);
-			//}, 0);
+
+			containerDocument.body.appendChild(fragment);
+			if(el.id){
+				containerDocument.body.id = el.id;
+			}
+			if(el.className) {
+				containerDocument.body.className = el.className;
+			}
+			if(el.style){
+				containerDocument.body.style = el.style;
+			}
+
+			this.querySelector = function querySelector(query){
+				return containerDocument.querySelector(query);
+			};
+
+			this.querySelectorAll = function querySelectorAll(query){
+				return containerDocument.querySelectorAll(query);
+			};
 
 			this.getElementById = function getElementById(id) {
 				return containerDocument.getElementById(id);
@@ -96,13 +119,22 @@ var ShadowRootPolyfill = (function () {
 
 			this.styleSheets = containerDocument.styleSheets;
 
+			this.recalcHeight = function(){
+				if (containerDocument.body.scrollHeight > el.offsetHeight) {
+					el.style.height = containerDocument.body.scrollHeight + "px";
+					container.style.height = containerDocument.body.scrollHeight + "px";
+				}
+			};
+
 			this.addStyleSheet = function (stylesheet) {
 				if (stylesheet instanceof HTMLLinkElement) {
 					containerDocument.getElementsByTagName("head")[0].appendChild(stylesheet);
+					this.recalcHeight();
 					return containerDocument.styleSheets[containerDocument.styleSheets.length - 1];
 				}
 				else if (stylesheet instanceof HTMLStyleElement) {
-					this.fragment.appendChild(stylesheet);
+					containerDocument.head.appendChild(stylesheet);
+					this.recalcHeight();
 					return stylesheet;
 				}
 				else {
@@ -125,13 +157,14 @@ var ShadowRootPolyfill = (function () {
 				}
 
 				var changeMe = document.createElement("div");
-				changeMe.innerHTML = this.insertedContent;
+				changeMe.innerHTML = this.insertedContent.trim();
 				containerDocument.body.innerHTML = "";
 
 				var insertionPoints = changeMe.querySelectorAll("content");
 				var tempOrigContent = this.origContent.cloneNode(true);
 
 				for (var i = 0, l = insertionPoints.length; i < l; i++) {
+
 					var insertionPoint = insertionPoints[i];
 					var selector = insertionPoint.getAttribute("select");
 					if (selector) {
@@ -139,7 +172,6 @@ var ShadowRootPolyfill = (function () {
 						var temp = document.createDocumentFragment();
 						for (var j = 0, l2 = matchingEls.length; j < l2; j++) {
 							temp.appendChild(matchingEls[j]);
-							//matchingEls[j].parentNode.removeChild(matchingEls[j]);
 						}
 						var el = document.createElement("span");
 						el.className = "insertionPointEnd";
@@ -150,6 +182,7 @@ var ShadowRootPolyfill = (function () {
 						insertionPoint.parentNode.removeChild(insertionPoint);
 					}
 				}
+
 				for (var i = 0, l = insertionPoints.length; i < l; i++) {
 					var insertionPoint = insertionPoints[i];
 					var selector = insertionPoint.getAttribute("select");
@@ -172,24 +205,21 @@ var ShadowRootPolyfill = (function () {
 				}
 
 				var changeMeChildren = changeMe.children;
-				this.fragment = document.createDocumentFragment();
+				var fragment = document.createDocumentFragment();
+
 				while (changeMeChildren.length) {
-					this.fragment.appendChild(changeMeChildren[0]);
+					fragment.appendChild(changeMeChildren[0]);
 				}
 
-				containerDocument.body.appendChild(this.fragment);
+				containerDocument.body.appendChild(fragment);
 
-				if (containerDocument.body.scrollHeight > el.offsetHeight) {
-					el.style.height = containerDocument.body.scrollHeight + "px";
-					container.style.height = containerDocument.body.scrollHeight + "px";
-
-				}
+				this.recalcHeight();
 
 				return changeMe;
 			};
 		};
 
-		//root.prototype = fragment.prototype;
+		root.prototype = fragment;
 
 		Object.defineProperty(root.prototype, 'innerHTML', {
 			enumerable:false,
@@ -199,8 +229,46 @@ var ShadowRootPolyfill = (function () {
 
 			},
 			set:function (prop) {
-				//console.log("set to:", prop);
 				return this._innerHTML(prop);
+			}
+		});
+
+		function CleanUpStyleStylesheet(txt) {
+			txt = txt.replace(/body/gi, "__removebody__");
+			txt = txt.replace(/html/gi, "__removehtml__");
+			return txt;
+		}
+
+		Object.defineProperty(root.prototype, 'applyAuthorStyles', {
+			enumerable:false,
+			configurable:true,
+			get:function () {
+				console.log("TODO: get applyAuthorStyles");
+			},
+			set:function (prop) {
+				var styleSheetLinks = document.head.querySelectorAll("link[rel='stylesheet']");
+				for (var i = 0, l = styleSheetLinks.length; i < l; i++) {
+					var stylesheet = styleSheetLinks[i];
+					var href = stylesheet.getAttribute("href");
+					var xhr = new XMLHttpRequest();
+					xhr.open("get", href, false);
+					xhr.send(null);
+					var styleTag = document.createElement("style");
+					styleTag.innerHTML = CleanUpStyleStylesheet(xhr.responseText);
+					this.addStyleSheet(styleTag);
+				}
+
+			}
+		});
+
+		Object.defineProperty(root.prototype, 'resetStyleInheritance', {
+			enumerable:false,
+			configurable:true,
+			get:function () {
+				console.log("TODO: get resetStyleInheritance");
+			},
+			set:function (prop) {
+				console.log("TODO: set resetStyleInheritance");
 			}
 		});
 

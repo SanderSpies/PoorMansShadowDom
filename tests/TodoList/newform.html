@@ -1,56 +1,42 @@
 <!DOCTYPE html>
-<!--
-Copyright (c) 2012, the Dart project authors.  Please see the AUTHORS file
-for details. All rights reserved. Use of this source code is governed by a
-BSD-style license that can be found in the LICENSE file.
--->
 <html lang="en">
 <body>
 <element name="x-todo-form" extends="div" constructor="FormComponent"
          apply-author-styles>
-  <template>
-    <!-- Note: <form> is to make "enter" work on Opera/IE. -->
-    <form data-action="submit:addTodo">
-      <input id="new-todo" placeholder="What needs to be done?" autofocus>
-    </form>
-  </template>
-  <script>
-      this.lifecycle({
-          created:function(shadowDom){
-              this.shadowDom = shadowDom;
-          },
-          inserted:function(){
-              this.todoInput = this.shadowDom.getElementById("new-todo");
-              var self = this;
-              this.todoInput.addEventListener("keydown", function(e){if(e.keyCode === 13){ e.preventDefault(); self.addTodo(self.todoInput.value); }});
-          }
-      });
+    <template>
+        <input id="new-todo" placeholder="What needs to be done?" autofocus>
+    </template>
+    <script>
+        this.lifecycle({
+            created:function (shadowDom) {
+                this.shadowDom = shadowDom;
+            },
+            inserted:function () {
+                this.todoInput = this.shadowDom.getElementById("new-todo");
+                var self = this;
+                this.todoInput.addEventListener("keydown", function (e) {
+                    if (e.keyCode === 13) {
+                        e.preventDefault();
+                        self.addTodo(self.todoInput.value);
+                        self.todoInput.value = '';
+                    }
+                });
+            }
+        });
 
-      FormComponent.prototype.addTodo = function(todo){
-          var addTodoEvent = new CustomEvent("AddTodoEvent", {
-              detail: {
-                  value: todo
-              },
-              cancelable: false
-          });
+        FormComponent.prototype.addTodo = function (todo) {
+            model.add(todo);
+        };
 
-          this.dispatchEvent(addTodoEvent);
-      };
+        FormComponent.prototype.handleEvent = function (e, o) {
+        };
 
-  </script>
-  <!--script type="application/dart">
-  import 'model.dart';
-  import 'package:web_components/web_component.dart';
+        FormComponent.prototype.setModel = function (model) {
+            model.observe(this);
+        };
 
-  class FormComponent extends WebComponent {
-    void addTodo(e) {
-      e.preventDefault(); // don't submit the form
-      if (_newTodo.value == '') return;
-      app.todos.add(new Todo(_newTodo.value));
-      _newTodo.value = '';
-    }
-  }
-  </script-->
+
+    </script>
 </element>
 </body>
 </html>
